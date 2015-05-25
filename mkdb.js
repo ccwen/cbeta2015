@@ -7,7 +7,7 @@ mulu level 4~level8
 
 repeat beg0639002
 */
-var taisho="/CBReader/XML/T*/*.xml";//T01n0001_001
+var taisho="/CBReader/XML/T0*/*.xml";//T01n0001_001
 var tei=require("ksana-indexer").tei;
 var juannow=0,njuan=0,title="";
 var filename2sutrano=function(fn) {
@@ -43,7 +43,7 @@ var extramulu=function(vpos) {
 				res.push(
 					{path:["mulu_depth"], value:toc[2] }
 					,{path:["mulu"], value:toc[1]  }
-					,{path:["mulu_voff"], value: vpos }
+					,{path:["mulu_vpos"], value: vpos }
 					
 				);
 			}
@@ -54,7 +54,7 @@ var extramulu=function(vpos) {
 		res.push(
 			{path:["mulu_depth"], value:3 }
 			,{path:["mulu"], value:title  }
-			,{path:["mulu_voff"], value: vpos }
+			,{path:["mulu_vpos"], value: vpos }
 		);
 		title="";
 	}	
@@ -71,7 +71,7 @@ var do_mulu=function(text,tag,attributes,status) {
 	res=res.concat([
 		{path:["mulu_depth"], value:level+3 }
 		,{path:["mulu"], value:text  }
-		,{path:["mulu_voff"], value: status.vpos }
+		,{path:["mulu_vpos"], value: status.vpos }
 	]);
 	return res;
 }
@@ -159,6 +159,7 @@ var config={
 	name:"cbeta"
 	,meta:{
 		config:"simple1"	
+		,tocs:["mulu"]
 		,bigram:loadBigram()
 		,normalize:loadToSim()
 	}
@@ -168,6 +169,7 @@ var config={
 	,bodystart: "<body>"
 	,bodyend : "</body>"
 	,reset:true
+	,estimatesize:419430400	
 	,setupHandlers:setupHandlers
 	,finalized:finalized
 	,finalizeField:finalizeField
