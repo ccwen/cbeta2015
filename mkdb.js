@@ -7,9 +7,9 @@ mulu level 4~level8
 
 repeat beg0639002
 */
-var taisho="/CBReader/XML/T0*/*.xml";//T01n0001_001
+var taisho="/CBReader/XML/T01/*.xml";//T01n0001_001
 var tei=require("ksana-indexer").tei;
-var juannow=0,njuan=0,title="";
+var juannow=0,njuan=0,title="",author="";
 var filename2sutrano=function(fn) {
 	var m=fn.match(/n(.*?)_/);
 	if (m) return m[1];
@@ -53,7 +53,7 @@ var extramulu=function(vpos) {
 	if (title) {
 		res.push(
 			{path:["mulu_depth"], value:3 }
-			,{path:["mulu"], value:title  }
+			,{path:["mulu"], value:title+" "+author  }
 			,{path:["mulu_vpos"], value: vpos }
 		);
 		title="";
@@ -66,12 +66,12 @@ var do_mulu=function(text,tag,attributes,status) {
 		//console.log(text,attributes.level);
 	var level=parseInt(attributes.level);
 
-	var res=extramulu(status.vpos);
+	var res=extramulu(status.vposstart);
 
 	res=res.concat([
 		{path:["mulu_depth"], value:level+3 }
 		,{path:["mulu"], value:text  }
-		,{path:["mulu_vpos"], value: status.vpos }
+		,{path:["mulu_vpos"], value: status.vposstart }
 	]);
 	return res;
 }
@@ -92,6 +92,15 @@ var beforebodystart=function(s,status) {
 	var comma=titleend;
 	while (s[comma]!="," && comma) comma--;
 	title=s.substring(comma+6,titleend);
+
+	var a=s.indexOf("<author>")
+	if (a) {
+		author=s.match(/<author>(.+?)<\/author>/);
+		if (author) {
+			author=author[1];
+		}
+	}
+	
 }
 var afterbodyend=function(s,status) {
 	//status has parsed body text and raw body text, raw start text
@@ -111,8 +120,23 @@ var getFolder=function(fn) {
 var warning=function() {
 	console.log.apply(console,arguments);
 }
-
-var onFile=function(fn) {
+var sutraid="";
+var extractSutraId=function(fn){
+	var m=fn.match(/n(.*?)_/);
+	if (m) {
+		 var sid=m[1].replace(/^0+/g,"");
+		 return sid;
+	}
+}
+var onFile=function(fn,status,session) {
+	var r=null;
+	var thissutraid=extractSutraId(fn);
+	if (thissutraid&&thissutraid!==sutraid) {
+		r=[{path:["sutra"], value: thissutraid}
+			,{path:["sutra_vpos"], value: session.vpos }
+		];
+		sutraid=thissutraid;
+	}
 
 	var folder=getFolder(fn);
 	if (folder!=lastfolder) {
@@ -121,6 +145,7 @@ var onFile=function(fn) {
 	juannow=0;
 	lastfolder=folder;
 	process.stdout.write("indexing "+fn+"\033[0G");
+	return r;
 }
 var setupHandlers=function() {
 	this.addHandler("cb:div/p/note", require("./note"));
@@ -154,9 +179,23 @@ var beforeParseTag=function(xml) {
 	xml=xml.replace("</text></TEI>","");
 	return xml;
 }
+var pat=/[A-Z](\d+)\.(\d+)[a-z]?\.(.+)/;
 
+var onSegName=function(segname) {
+	var r=pat.exec(segname);
+	var o=segname;
+	if (r) {
+		o=r[3]+r[1];
+		while (o[0]=="0") o=o.substr(1);
+		o=o.replace(/([abc])0/,"$1");
+	}
+	return o;
+}
+var finalizeJSON=function(JSON) {
+	JSON.segnames.enc="utf8";
+}
 var config={
-	name:"cbeta"
+	name:"cbeta1"
 	,meta:{
 		config:"simple1"	
 		,tocs:["mulu"]
@@ -164,22 +203,25 @@ var config={
 		,normalize:loadToSim()
 	}
 	,glob:taisho
-	,segsep:"pb.n"
+	,segsep:"pb.xml:id"
 	,format:"TEI-P5"
 	,bodystart: "<body>"
 	,bodyend : "</body>"
 	,reset:true
 	,estimatesize:419430400	
 	,setupHandlers:setupHandlers
-	,finalized:finalized
-	,finalizeField:finalizeField
 	,warning:warning
 	,captureTags:captureTags
+	,norawtag:true
 	,callbacks: {
 		beforebodystart:beforebodystart
 		,afterbodyend:afterbodyend
 		,onFile:onFile
 		,beforeParseTag:beforeParseTag
+		,finalized:finalized
+		,finalizeField:finalizeField	
+		,finalizeJSON:finalizeJSON
+		,onSegName:onSegName
 	}
 }
 require("ksana-indexer").build(config);
