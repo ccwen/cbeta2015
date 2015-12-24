@@ -7,22 +7,22 @@ mulu level 4~level8
 
 repeat beg0639002
 */
-var taisho="/CBReader/XML/T01/*.xml";//T01n0001_001
+var taisho="/CBReader/XML/T*/*.xml";//T01n0001_001
 var tei=require("ksana-indexer").tei;
 var juannow=0,njuan=0,title="",author="";
 var filename2sutrano=function(fn) {
 	var m=fn.match(/n(.*?)_/);
-	if (m) return m[1];
+	if (m) return m[1].replace(/^0+/g,"");
 }
 var do_milestone=function(text,tag,attributes,status) {
 	juannow=parseInt(attributes["n"],10);
 }
-
+/*
 var do_juan=function(text,tag,attributes,status) {
 	if (attributes["fun"]=="open") {		
 		njuan++;
 		var sutrano=filename2sutrano(status.filename) || "?";
-		return [
+		r= [
 			{path:["juan","text"], value:text  }
 			,{path:["juan","no"], value: sutrano+"."+attributes["n"] }
 			,{path:["sutra",sutrano,"juan"], value:[attributes["n"] ,njuan]   }
@@ -30,7 +30,7 @@ var do_juan=function(text,tag,attributes,status) {
 	}
 	return null;
 }
-
+*/
 var folder2name=require("./foldername");
 
 var folder=0,lastfolder=0,newfolder=1;
@@ -78,7 +78,7 @@ var do_mulu=function(text,tag,attributes,status) {
 var captureTags={
 	//"cb:juan":do_juan,"/cb:juan":do_juanend
 	"milestone":do_milestone,
-	"cb:juan":do_juan,
+	//"cb:juan":do_juan,
 	"cb:mulu":do_mulu,
 	//"title":do_title_body,
 };
@@ -121,16 +121,10 @@ var warning=function() {
 	console.log.apply(console,arguments);
 }
 var sutraid="";
-var extractSutraId=function(fn){
-	var m=fn.match(/n(.*?)_/);
-	if (m) {
-		 var sid=m[1].replace(/^0+/g,"");
-		 return sid;
-	}
-}
+
 var onFile=function(fn,status,session) {
 	var r=null;
-	var thissutraid=extractSutraId(fn);
+	var thissutraid=filename2sutrano(fn);
 	if (thissutraid&&thissutraid!==sutraid) {
 		r=[{path:["sutra"], value: thissutraid}
 			,{path:["sutra_vpos"], value: session.vpos }
@@ -195,7 +189,7 @@ var finalizeJSON=function(JSON) {
 	JSON.segnames.enc="utf8";
 }
 var config={
-	name:"cbeta1"
+	name:"cbeta"
 	,meta:{
 		config:"simple1"	
 		,tocs:["mulu"]
