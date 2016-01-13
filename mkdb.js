@@ -43,8 +43,7 @@ var extramulu=function(vpos) {
 				res.push(
 					{path:["mulu_depth"], value:toc[2] }
 					,{path:["mulu"], value:toc[1]  }
-					,{path:["mulu_vpos"], value: vpos }
-					
+					,{path:["mulu_vpos"], value: vpos }					
 				);
 			}
 		}
@@ -82,7 +81,9 @@ var captureTags={
 	"cb:mulu":do_mulu,
 	//"title":do_title_body,
 };
-
+var removeInvalidChar=function(text) {//android will crash
+	return text.replace(/[\uD900-\uDBFF][\uDC00-\uDFFF]/g,"??");
+}
 var beforebodystart=function(s,status) {
 	var juan=status.filename.substr(status.filename.length-7,3);
 	//capture title from teiHeader
@@ -91,13 +92,13 @@ var beforebodystart=function(s,status) {
 	var titleend=s.indexOf('</title>');
 	var comma=titleend;
 	while (s[comma]!="," && comma) comma--;
-	title=s.substring(comma+6,titleend);
+	title=removeInvalidChar(s.substring(comma+6,titleend)).replace(/<.*?>/g,'');
 
 	var a=s.indexOf("<author>")
 	if (a) {
 		author=s.match(/<author>(.+?)<\/author>/);
 		if (author) {
-			author=author[1];
+			author=removeInvalidChar(author[1]).replace(/<.*?>/g,'');
 		}
 	}
 	
@@ -175,7 +176,16 @@ var beforeParseTag=function(xml) {
 }
 var pat=/[A-Z](\d+)\.(\d+)[a-z]?\.(.+)/;
 
+var onFileName=function(filename) {
+	var slash=filename.indexOf("/");
+	filename=filename.substr(slash+1);
+	filename=filename.substr(0,filename.length-4);
+	return filename;
+}
 var onSegName=function(segname) {
+	while (segname[0]==="0") segname=segname.substr(1);
+	return segname;
+/*	
 	var r=pat.exec(segname);
 	var o=segname;
 	if (r) {
@@ -184,20 +194,22 @@ var onSegName=function(segname) {
 		o=o.replace(/([abc])0/,"$1");
 	}
 	return o;
+*/	
 }
 var finalizeJSON=function(JSON) {
-	JSON.segnames.enc="utf8";
+	//JSON.segnames.enc="utf8";
 }
 var config={
 	name:"cbeta"
 	,meta:{
 		config:"simple1"	
-		,tocs:["mulu"]
+		,toc:"mulu"
 		,bigram:loadBigram()
 		,normalize:loadToSim()
+		,sidsep:"@"
 	}
 	,glob:taisho
-	,segsep:"pb.xml:id"
+	,segsep:"pb.n"
 	,format:"TEI-P5"
 	,bodystart: "<body>"
 	,bodyend : "</body>"
@@ -216,6 +228,7 @@ var config={
 		,finalizeField:finalizeField	
 		,finalizeJSON:finalizeJSON
 		,onSegName:onSegName
+		,onFileName:onFileName
 	}
 }
 require("ksana-indexer").build(config);
